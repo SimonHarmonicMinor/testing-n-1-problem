@@ -13,7 +13,7 @@ repositories {
 }
 
 ext {
-	set('lombokVersion', '1.8.26')
+	set('lombokVersion', '1.18.26')
 }
 
 
