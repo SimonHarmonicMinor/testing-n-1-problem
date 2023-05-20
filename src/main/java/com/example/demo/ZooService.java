@@ -19,14 +19,7 @@ public class ZooService {
     public List<ZooResponse> findAllZoos() {
         final var zoos = zooRepository.findAll();
         return zoos.stream()
-                   .map(zoo -> new ZooResponse(
-                       zoo.getId(),
-                       zoo.getName(),
-                       zoo.getAnimals()
-                           .stream()
-                           .map(a -> new ZooResponse.AnimalResponse(a.getId(), a.getName()))
-                           .toList()
-                   ))
+                   .map(ZooResponse::new)
                    .toList();
     }
 }
