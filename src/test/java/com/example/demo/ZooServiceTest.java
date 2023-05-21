@@ -3,25 +3,47 @@ package com.example.demo;
 import com.example.demo.dto.ZooResponse;
 import com.example.demo.entity.Zoo;
 import com.example.demo.repository.ZooRepository;
+import com.example.demo.testutil.DatasourceProxyBeanPostProcessor;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.List;
 
+import static com.example.demo.testutil.QueryCountAssertions.Expectation.ofSelects;
+import static com.example.demo.testutil.QueryCountAssertions.assertQueryCount;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
+import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace.NONE;
 import static org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED;
 
 @DataJpaTest
+@AutoConfigureTestDatabase(replace = NONE)
 @Transactional(propagation = NOT_SUPPORTED)
-@Import(ZooService.class)
+@Testcontainers
+@Import({ZooService.class, DatasourceProxyBeanPostProcessor.class})
 class ZooServiceTest {
+    @Container
+    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:13");
+
+    @DynamicPropertySource
+    static void setProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.username", POSTGRES::getUsername);
+        registry.add("spring.datasource.password", POSTGRES::getPassword);
+    }
+
     @Autowired
     private ZooService zooService;
     @Autowired
@@ -41,7 +63,10 @@ class ZooServiceTest {
 
         zooRepository.saveAll(List.of(zoo1, zoo2));
 
-        final var allZoos = zooService.findAllZoos();
+        final var allZoos = assertQueryCount(
+            () -> zooService.findAllZoos(),
+            ofSelects(1)
+        );
 
         assertThat(
             allZoos, Matchers.allOf(
