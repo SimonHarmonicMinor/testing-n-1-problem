@@ -17,7 +17,7 @@ public class ZooService {
 
     @Transactional(readOnly = true)
     public List<ZooResponse> findAllZoos() {
-        final var zoos = zooRepository.findAll();
+        final var zoos = zooRepository.findAllWithAnimalsJoined();
         return zoos.stream()
                    .map(ZooResponse::new)
                    .toList();
